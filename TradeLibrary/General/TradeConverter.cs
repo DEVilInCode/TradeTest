@@ -11,16 +11,27 @@ namespace TradeLibrary.General
 {
     internal class TradeConverter : JsonConverter<Trade>
     {
+        private readonly string _pair;
+
+        public TradeConverter(string pair)
+        {
+            _pair = pair;
+        }
+
+
         public override Trade Read(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options)
         {
-            var trade = new Trade();
-            int index = 0;
-
             if (reader.TokenType != JsonTokenType.StartArray)
                 throw new JsonException("Expected array start");
+
+            Trade trade = new()
+            {
+                Pair = _pair
+            };
+            int index = 0;
 
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {
@@ -34,6 +45,7 @@ namespace TradeLibrary.General
                         break;
                     case 2: // Amount
                         trade.Amount = reader.GetDecimal();
+                        trade.Side = trade.Amount > 0 ? "buy" : "sell";
                         break;
                     case 3: // Price
                         trade.Price = reader.GetDecimal();

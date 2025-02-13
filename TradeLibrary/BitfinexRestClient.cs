@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using TradeLibrary.Entities;
 using TradeLibrary.General;
@@ -13,45 +14,46 @@ namespace TradeLibrary
     {
         private readonly HttpClient _client = new();
 
-        private readonly HttpRequestMessage _request = new()
+        private IEnumerable<T> GetDeserializedResponse<T>(Uri uri, string pair)
         {
-            Method = HttpMethod.Get,
-            Headers =
+            HttpRequestMessage request = new()
+            {
+                Method = HttpMethod.Get,
+                Headers =
                 {
                     { "accept", "application/json" },
                 },
-        };
+                RequestUri = uri
+            };
 
-        private IEnumerable<T> GetSplittedResponse<T>(HttpRequestMessage request, string pair, Func<string[], string, T> stringToT)
-        {
             using HttpResponseMessage response = _client.Send(request);
             response.EnsureSuccessStatusCode();
 
-            List<T> list = [];
+            using JsonDocument doc = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
+            JsonElement root = doc.RootElement;
 
-            //Split into writes
-            foreach (string s in response.Content.ReadAsStringAsync().Result[2..^2].Split("],["))
-                //Split into fields
-                list.Add(stringToT(s.Split(','), pair));
+            return JsonArrayDeserialize.ArrayDeserialize<T>(root, pair)
+                .Where(x => x is not null)
+                .Cast<T>();
+        }
 
-            return list.AsEnumerable();
+        public Task<Ticker> GetTickerAsync(string pair)
+        {
+            return Task.FromResult(
+                GetDeserializedResponse<Ticker>(new Uri($"https://api-pub.bitfinex.com/v2/ticker/t{pair}"), pair).First());
         }
 
         public Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount)
         {
-            _request.RequestUri = new Uri($"https://api-pub.bitfinex.com/v2/candles/trades/t{pair}/hist?limit={maxCount}");
-
-            return Task.FromResult(GetSplittedResponse(_request, pair, StringParsers.GetTrade));
+            return Task.FromResult(
+                GetDeserializedResponse<Trade>(new Uri($"https://api-pub.bitfinex.com/v2/candles/trades/t{pair}/hist?limit={maxCount}"), pair));
         }
 
         public Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInSec, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 0)
         {
-            //TODO: use periodInSec, from, to, etc. 
-            throw new NotImplementedException();
-
-            _request.RequestUri = new Uri($"https://api-pub.bitfinex.com/v2/candles/trade%3A1m%3At{pair}/hist");
-
-            return Task.FromResult(GetSplittedResponse(_request, pair, StringParsers.GetCandle));
+            return Task.FromResult(GetDeserializedResponse<Candle>(
+                new Uri($"https://api-pub.bitfinex.com/v2/candles/trade%3A" +
+                $"{TimeFrame.GetTimeFrameFromInt(periodInSec)}%3At{pair}/hist{(count > 0 ? $"?limit={count}" : string.Empty)}"), pair));
         }
     }
 }

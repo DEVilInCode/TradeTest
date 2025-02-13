@@ -11,16 +11,27 @@ namespace TradeLibrary.General
 {
     internal class CandleConverter : JsonConverter<Candle>
     {
+        private readonly string _pair;
+
+        public CandleConverter(string pair)
+        {
+            _pair = pair;
+        }
+
         public override Candle Read(
        ref Utf8JsonReader reader,
        Type typeToConvert,
        JsonSerializerOptions options)
         {
-            var candle = new Candle();
-            int index = 0;
-
             if (reader.TokenType != JsonTokenType.StartArray)
                 throw new JsonException("Expected array start");
+
+            Candle candle = new()
+            {
+                TotalPrice = 0,
+                Pair = _pair
+            };
+            int index = 0;
 
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
             {

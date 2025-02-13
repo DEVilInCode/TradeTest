@@ -36,6 +36,9 @@ namespace TradeLibrary
         public Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInSec, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 0)
             => _restClient.GetCandleSeriesAsync(pair, periodInSec, from, to, count);
 
+        public Task<Ticker> GetTickerAsync(string pair)
+            => _restClient.GetTickerAsync(pair);
+
         public void SubscribeTrades(string pair, int maxCount = 100)
             => _webSocketClient.SubscribeTrades(pair, maxCount);
 

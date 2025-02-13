@@ -12,5 +12,8 @@ namespace TradeLibrary.Interfaces
         Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount);
         Task<IEnumerable<Candle>> GetCandleSeriesAsync(string pair, int periodInSec, DateTimeOffset? from, DateTimeOffset? to = null, long? count = 0);
 
+        //Add GetTicker method to have access to pair last prices
+        Task<Ticker> GetTickerAsync(string pair);
+
     }
 }
