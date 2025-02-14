@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TradeLibrary.Entities;
+﻿using TradeLibrary.Entities;
 
 namespace TradeLibrary.Interfaces
 {
@@ -11,11 +6,15 @@ namespace TradeLibrary.Interfaces
     {
         event Action<Trade> NewBuyTrade;
         event Action<Trade> NewSellTrade;
-        void SubscribeTrades(string pair, int maxCount = 100);
+
+        //Deleted param: maxCount. Can't be used for subscription
+        void SubscribeTrades(string pair);
         void UnsubscribeTrades(string pair);
 
         event Action<Candle> CandleSeriesProcessing;
-        void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0);
+
+        //Deleted params: from, to, count. Can't be used for subscription
+        void SubscribeCandles(string pair, int periodInSec);
         void UnsubscribeCandles(string pair);
     }
 }
