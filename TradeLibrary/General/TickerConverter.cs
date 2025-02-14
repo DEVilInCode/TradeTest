@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using TradeLibrary.Entities;
 
 namespace TradeLibrary.General
 {
     internal class TickerConverter : JsonConverter<Ticker>
     {
-        private string _pair;
+        private readonly string _pair;
         public TickerConverter(string pair)
         {
             _pair = pair;

@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Xml.Linq;
 using TradeLibrary.Entities;
 using TradeLibrary.General;
 using TradeLibrary.Interfaces;
@@ -20,7 +15,7 @@ namespace TradeLibrary
         public event Action<Trade>? NewBuyTrade;
         public event Action<Trade>? NewSellTrade;
         public event Action<Candle>? CandleSeriesProcessing;
-        
+
         private readonly ClientWebSocket _client;
         private readonly CancellationTokenSource _cancelTokenSource;
 
@@ -73,7 +68,7 @@ namespace TradeLibrary
                     Console.WriteLine(message);
 
                     if (!string.IsNullOrEmpty(message))
-                        await Task.Run(() => JsonHandler(message), _cancelTokenSource.Token);   
+                        await Task.Run(() => JsonHandler(message), _cancelTokenSource.Token);
                 }
             }
             catch (Exception ex)
@@ -95,7 +90,6 @@ namespace TradeLibrary
             }
             else if (root.ValueKind == JsonValueKind.Array)
             {
-                
                 string chanId = root[0].ToString();
                 var (channel, pair) = _activeSubscriptions.First(x => x.Value == chanId).Key;
 
@@ -103,13 +97,13 @@ namespace TradeLibrary
                 {
                     string s = root[1].GetString() ?? string.Empty;
 
-                    if(s.SequenceEqual("te"))
+                    if (s.SequenceEqual("te"))
                     {
-                        //TODO: exec
+                        HandleChannelArray(channel, root[2], pair);
                     }
-                    else if(s.SequenceEqual("tu"))
+                    else if (s.SequenceEqual("tu"))
                     {
-                        //TODO: update
+                        HandleChannelArray(channel, root[2], pair);
                     }
                 }
                 else if (root[1].ValueKind == JsonValueKind.Array)
@@ -152,43 +146,42 @@ namespace TradeLibrary
             switch (eventName)
             {
                 case "subscribed":
-                if (root.TryGetProperty("channel", out JsonElement channelElement) &&
-                    root.TryGetProperty("chanId", out JsonElement chanIdElement))
-                {
-                    string channel = channelElement.GetString() ?? throw new InvalidOperationException("Missing 'channel' value");
-                    string chanId = chanIdElement.GetInt64().ToString() ?? throw new InvalidOperationException("Missing 'chanId' value");
-
-                    string pair = string.Empty;
-
-                    if (root.TryGetProperty("pair", out JsonElement pairElement))
+                    if (root.TryGetProperty("channel", out JsonElement channelElement) &&
+                        root.TryGetProperty("chanId", out JsonElement chanIdElement))
                     {
-                        //trades
-                        pair = pairElement.GetString() ?? string.Empty;
+                        string channel = channelElement.GetString() ?? throw new InvalidOperationException("Missing 'channel' value");
+                        string chanId = chanIdElement.GetInt64().ToString() ?? throw new InvalidOperationException("Missing 'chanId' value");
+
+                        string pair = string.Empty;
+
+                        if (root.TryGetProperty("pair", out JsonElement pairElement))
+                        {
+                            //trades
+                            pair = pairElement.GetString() ?? string.Empty;
+                        }
+                        else if (root.TryGetProperty("key", out JsonElement keyElement))
+                        {
+                            //candles
+                            string rawKey = keyElement.GetString() ?? string.Empty;
+                            int index = rawKey.LastIndexOf(":t", StringComparison.Ordinal) + 2;
+
+                            pair = index >= 0 ? rawKey[index..] : rawKey;
+                        }
+
+                        if (!string.IsNullOrEmpty(pair))
+                        {
+                            _activeSubscriptions.TryAdd((channel, pair), chanId);
+                        }
+
                     }
-                    else if (root.TryGetProperty("key", out JsonElement keyElement))
-                    {
-                        //candles
-                        string rawKey = keyElement.GetString() ?? string.Empty;
-                        int index = rawKey.LastIndexOf(":t", StringComparison.Ordinal) + 2;
-
-                        pair = index >= 0 ? rawKey[index..] : rawKey;
-
-                    }
-
-                    if (!string.IsNullOrEmpty(pair))
-                    {
-                        _activeSubscriptions.TryAdd((channel, pair), chanId);
-                    }
-
-                }
-                break;
+                    break;
 
                 default:
                     break;
-                }
             }
+        }
 
-        public void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0)
+        public void SubscribeCandles(string pair, int periodInSec)
         {
             var message = new
             {
@@ -200,7 +193,7 @@ namespace TradeLibrary
             Send(message);
         }
 
-        public void SubscribeTrades(string pair, int maxCount = 100)
+        public void SubscribeTrades(string pair)
         {
             var message = new
             {
@@ -222,7 +215,7 @@ namespace TradeLibrary
         {
             Unsubscribe(pair, "candles");
         }
-        
+
         public void UnsubscribeTrades(string pair)
         {
             Unsubscribe(pair, "trades");

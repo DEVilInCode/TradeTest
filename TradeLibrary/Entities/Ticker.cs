@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TradeLibrary.Entities
+﻿namespace TradeLibrary.Entities
 {
     public class Ticker
     {
@@ -12,7 +6,7 @@ namespace TradeLibrary.Entities
 
         public decimal Bid { get; set; }
 
-        public decimal BidSize {get; set; }
+        public decimal BidSize { get; set; }
 
         public decimal Ask { get; set; }
 
@@ -20,7 +14,7 @@ namespace TradeLibrary.Entities
 
         public decimal DailyChange { get; set; }
 
-        public decimal DailyChangeRelative { get; set;}
+        public decimal DailyChangeRelative { get; set; }
 
         public decimal LastPrice { get; set; }
 

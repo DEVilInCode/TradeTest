@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading.Tasks;
-using TradeLibrary.Entities;
+﻿using TradeLibrary.Entities;
 using TradeLibrary.Interfaces;
 
 namespace TradeLibrary
@@ -29,6 +23,50 @@ namespace TradeLibrary
             _webSocketClient.NewSellTrade += OnNewSellTrade;
             _webSocketClient.CandleSeriesProcessing += OnCandleSeriesProcessing;
         }
+        public async Task<(bool Success, decimal? Price)> TryGetPrice(string from, string to, decimal amount)
+        {
+
+            try
+            {
+                Ticker directTicker = await GetTickerAsync($"{from}{to}");
+                if (directTicker.LastPrice != 0)
+                    return (true, directTicker.LastPrice * amount);
+            }
+            catch
+            {
+                try
+                {
+                    // Пытаемся получить обратную пару
+                    Ticker reverseTicker = await GetTickerAsync($"{to}{from}");
+                    if (reverseTicker.LastPrice != 0)
+                        return (true, (1m / reverseTicker.LastPrice) * amount);
+                }
+                catch (Exception)
+                {
+
+                    try
+                    {
+                        // Пытаемся через USD-пары
+                        Ticker fromUsdTicker = await GetTickerAsync($"{from}USD");
+                        Ticker toUsdTicker = await GetTickerAsync($"{to}USD");
+
+                        if (fromUsdTicker.LastPrice != 0 && toUsdTicker.LastPrice != 0)
+                        {
+                            decimal crossRate = fromUsdTicker.LastPrice / toUsdTicker.LastPrice;
+                            return (true, crossRate * amount);
+                        }
+                    }
+                    catch
+                    {
+                        return (false, null);
+                    }
+                }
+
+            }
+
+            return (false, null);
+
+        }
 
         public Task<IEnumerable<Trade>> GetNewTradesAsync(string pair, int maxCount)
             => _restClient.GetNewTradesAsync(pair, maxCount);
@@ -39,14 +77,14 @@ namespace TradeLibrary
         public Task<Ticker> GetTickerAsync(string pair)
             => _restClient.GetTickerAsync(pair);
 
-        public void SubscribeTrades(string pair, int maxCount = 100)
-            => _webSocketClient.SubscribeTrades(pair, maxCount);
+        public void SubscribeTrades(string pair)
+            => _webSocketClient.SubscribeTrades(pair);
 
         public void UnsubscribeTrades(string pair)
             => _webSocketClient.UnsubscribeTrades(pair);
 
-        public void SubscribeCandles(string pair, int periodInSec, DateTimeOffset? from = null, DateTimeOffset? to = null, long? count = 0)
-            => _webSocketClient.SubscribeCandles(pair, periodInSec, from, to, count);
+        public void SubscribeCandles(string pair, int periodInSec)
+            => _webSocketClient.SubscribeCandles(pair, periodInSec);
 
         public void UnsubscribeCandles(string pair)
             => _webSocketClient.UnsubscribeCandles(pair);
