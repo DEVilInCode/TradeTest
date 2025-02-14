@@ -42,12 +42,6 @@ namespace TradeApp.ViewModel
             PropertyInfo[] propertyInfos = type.GetProperties();
             string[] names = propertyInfos.Select(x => x.Name).ToArray();
 
-            var currencyPairs = names.SelectMany((x, i) => names
-                                        .Where((y, j) => i != j) // Исключаем пары с одинаковыми индексами
-                                        .Select(y => (x, y))      // Создаем кортеж (string, string)
-                                        )
-                                    .ToList();
-
             Money m = new()
             {
                 USD = 0,
